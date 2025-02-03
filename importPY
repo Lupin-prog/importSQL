@@ -1,0 +1,64 @@
+import pyodbc
+import pandas as pd
+from datetime import datetime
+
+# Parametry połączenia
+driver = 'ODBC Driver 17 for SQL Server'
+server = 'DOMINO'
+database = 'mojaBaza'
+trusted = 'yes'
+
+# Parametry połączenia
+conn_str = (
+    f"DRIVER={driver};"
+    f"SERVER={server};"
+    f"DATABASE={database};"
+    f"Trusted_Connection={trusted};"
+)
+
+def load_csv(file_path, delimiter=','):
+    try:
+        # Wczytanie pliku CSV z wybranym separatorem
+        df = pd.read_csv(file_path, sep=delimiter, encoding='utf-8', skip_blank_lines=True)
+        return df
+    except Exception as e:
+        print("Błąd podczas wczytywania pliku CSV:", e)
+        raise
+
+try:
+    # Połączenie z bazą danych
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+
+    # Ścieżka do pliku CSV
+    file_path = r"C:\Users\abddo\OneDrive\Pulpit\excel\odbc_IO-main\odbc_IO-main\csv_data\przyklad.csv"
+    delimiter = ';'  # Możliwość ustawienia separatora (zmień na ',' jeśli potrzeba)
+
+    # Wczytanie danych z pliku CSV
+    df_data = load_csv(file_path, delimiter)
+
+    # Inicjalizacja kolumn i tabela docelowa
+    table_name = 'PrzykladowaTabela'
+    columns = ['App', 'Category', 'Genres', 'Size', 'Type', 'Reviews']
+
+    # Filtracja danych do wymaganych kolumn
+    df_data = df_data[columns]
+
+    # Dodanie 15 wierszy (lub mniej, jeśli CSV jest mniejszy)
+    df_data = df_data.head(15)
+
+    # Iteracja przez DataFrame i wstawianie danych
+    for index, row in df_data.iterrows():
+        sql_insert = f"INSERT INTO {table_name} ({', '.join(df_data.columns)}) VALUES (?, ?, ?, ?, ?, ?)"
+        cursor.execute(sql_insert, tuple(row))
+        conn.commit()
+
+    # Zamykanie połączenia
+    cursor.close()
+    conn.close()
+
+    print(df_data)
+    print("Dane zostały pomyślnie dodane do bazy danych!")
+
+except Exception as e:
+    print("Wystąpił błąd:", e)
